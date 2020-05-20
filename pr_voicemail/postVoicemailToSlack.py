@@ -1,3 +1,6 @@
+from pprint import pprint
+import urllib3
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -24,21 +27,41 @@ def lambda_handler(event, context):
     filename = event["Records"][0]["s3"]["object"]["key"].split('.')[0]
     logger.debug(f"Found recroding {filename}")
 
-    # TODO: this retrieves a dict from s3 that describes the voicemail_recording, not the recording itself
-    response = s3_client.get_object(
-        Bucket="voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
-        Key=f"recordings/{filename}.wav"
-    )
-    voicemail_recording = None
-    presigned_url_to_vm_recording = None
+    try:
+        recording_response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': "voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+                                                            'Key': f"recordings/{filename}.wav"},
+                                                    ExpiresIn=100)
+    except ClientError as e:
+        logging.error(e)
 
-    # TODO: this retrieves a dict that describes the transcript, not the file content
-    response = s3_client.get_object(
-        Bucket="voicemail-transcripts-bucket",
-        Key=f"{filename}.json"
+    presigned_url_to_vm_recording = recording_response
+
+    try:
+        transcript_response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': "voicemail-transcripts-bucket",
+                                                            'Key': f"{filename}.json"},
+                                                    ExpiresIn=100)
+    except ClientError as e:
+        logging.error(e)
+
+    http = urllib3.PoolManager()
+    r = http.request('GET', transcript_response)
+    transcript_json = eval(r.data)
+    transcript_text = transcript_json['results']['transcripts'][0]['transcript']
+
+    dynamodb_client = boto3.client('dynamodb')
+
+    response = dynamodb_client.query(
+        ExpressionAttributeValues={
+            ':v1': {
+                'S': filename,
+            },
+        },
+        KeyConditionExpression='contactId = :v1',
+        TableName='VoicemailTest-VoicemailStack-SJ17OAJAXH9U-ContactVoicemailTable-1LK2JJUVO6F2Q',
     )
-    voicemail_transcript = None
-    transcript_text = None
+    pprint(response)
 
     myUserName = 'Charlotte'
     myMsg = f"Transcript: {transcript_text}"
@@ -49,6 +72,6 @@ def lambda_handler(event, context):
         channel=myUserName,
         text=myMsg
     )
-
+    quit()
     lambdaResponse = slackSend(myJsonMsg)
     return lambdaResponse
