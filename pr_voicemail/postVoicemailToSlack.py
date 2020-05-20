@@ -22,16 +22,25 @@ s3_client = session.client('s3')
 
 
 def getUserNamefromAgentId(uid):
-    # TODO: do stuff
+    dynamodb_client = boto3.client('dynamodb')
+    response = dynamodb_client.query(
+        ExpressionAttributeValues={
+            ':v1': {
+                'S': uid,
+            },
+        },
+        KeyConditionExpression='agentId = :v1',
+        TableName='VoicemailTest-VoicemailStack-SJ17OAJAXH9U-UsersTable-QPOOKWC6VGIR',
+    )
+    myUserName =response['Items'][0]['username']['S']
     return myUserName
 
 
 def lambda_handler(event, context):
     # should normally use os.path to parse filenames or urllib3 to parse urls
     # however in this case, AWS Connect seems to be setting predictable filenames, so split should work.
-    filename = event["Records"][0]["s3"]["object"]["key"].split('.')[0]
-    logger.debug(f"Found recroding {filename}")
-
+    filename = event["Records"][0]["s3"]["object"]["key"]
+    logger.debug(f"Found recording {filename}")
     try:
         recording_response = s3_client.generate_presigned_url(
             'get_object',
@@ -46,10 +55,13 @@ def lambda_handler(event, context):
     presigned_url_to_vm_recording = recording_response
 
     try:
-        transcript_response = s3_client.generate_presigned_url('get_object',
-                                                    Params={'Bucket': "voicemail-transcripts-bucket",
-                                                            'Key': f"{filename}.json"},
-                                                    ExpiresIn=100)
+        transcript_response = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': "voicemail-transcripts-bucket",
+                'Key': f"{filename}"
+            },
+            ExpiresIn=100)
     except ClientError as e:
         logging.error(e)
 
@@ -57,21 +69,11 @@ def lambda_handler(event, context):
     r = http.request('GET', transcript_response)
     transcript_json = eval(r.data)
     transcript_text = transcript_json['results']['transcripts'][0]['transcript']
-    myAgentId = None
+    transcript_recording_file_object = s3_client.get_object(Bucket="voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+                                  Key=f"recordings/{filename}.wav")
+    myAgentId = transcript_recording_file_object["Metadata"]["agent-id"]
     myUserName = getUserNamefromAgentId(myAgentId)
 
-    dynamodb_client = boto3.client('dynamodb')
-
-    response = dynamodb_client.query(
-        ExpressionAttributeValues={
-            ':v1': {
-                'S': filename,
-            },
-        },
-        KeyConditionExpression='contactId = :v1',
-        TableName='VoicemailTest-VoicemailStack-SJ17OAJAXH9U-ContactVoicemailTable-1LK2JJUVO6F2Q',
-    )
-    pprint(response)
 
     myMsg = f"Transcript: {transcript_text}"
     myMsg += f"Recording available at: {presigned_url_to_vm_recording}"
@@ -81,6 +83,5 @@ def lambda_handler(event, context):
         channel=myUserName,
         text=myMsg
     )
-    quit()
     lambdaResponse = slackSend(myJsonMsg)
     return lambdaResponse

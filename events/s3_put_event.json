@@ -27,9 +27,9 @@
           "arn": "arn:aws:s3:::voicemail-transcripts-bucket"
         },
         "object": {
-          "key": "b76a9750-7add-4717-bd77-ebf23cf4ab54_1589858700.json",
+          "key": "e431a717-ef63-48fa-9510-b84308dc45c1_1589961794",
           "size": 1024,
-          "eTag": "58f35d188e1ccf8e336c934e0b0f82e8",
+          "eTag": "bc8edd7e0495ca749771dd3b56f0c0e2",
           "sequencer": "0A1B2C3D4E5F678901"
         }
       }
