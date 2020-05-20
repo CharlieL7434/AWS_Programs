@@ -21,6 +21,11 @@ session = boto3.session.Session(region_name=config.DEFAULT_AWS_REGION)
 s3_client = session.client('s3')
 
 
+def getUserNamefromAgentId(uid):
+    # TODO: do stuff
+    return myUserName
+
+
 def lambda_handler(event, context):
     # should normally use os.path to parse filenames or urllib3 to parse urls
     # however in this case, AWS Connect seems to be setting predictable filenames, so split should work.
@@ -28,10 +33,13 @@ def lambda_handler(event, context):
     logger.debug(f"Found recroding {filename}")
 
     try:
-        recording_response = s3_client.generate_presigned_url('get_object',
-                                                    Params={'Bucket': "voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
-                                                            'Key': f"recordings/{filename}.wav"},
-                                                    ExpiresIn=100)
+        recording_response = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': "voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+                'Key': f"recordings/{filename}.wav"
+            },
+            ExpiresIn=100)
     except ClientError as e:
         logging.error(e)
 
@@ -49,6 +57,8 @@ def lambda_handler(event, context):
     r = http.request('GET', transcript_response)
     transcript_json = eval(r.data)
     transcript_text = transcript_json['results']['transcripts'][0]['transcript']
+    myAgentId = None
+    myUserName = getUserNamefromAgentId(myAgentId)
 
     dynamodb_client = boto3.client('dynamodb')
 
@@ -63,7 +73,6 @@ def lambda_handler(event, context):
     )
     pprint(response)
 
-    myUserName = 'Charlotte'
     myMsg = f"Transcript: {transcript_text}"
     myMsg += f"Recording available at: {presigned_url_to_vm_recording}"
 
