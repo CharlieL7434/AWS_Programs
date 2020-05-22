@@ -10,7 +10,6 @@ import logging
 from SlackMessage import SlackMessage
 from slackSend import slackSend
 
-
 logger = logging.getLogger("voicemail")
 logger.setLevel(logging.DEBUG)
 
@@ -32,7 +31,7 @@ def getUserNamefromAgentId(uid):
         KeyConditionExpression='agentId = :v1',
         TableName='VoicemailTest-VoicemailStack-SJ17OAJAXH9U-UsersTable-QPOOKWC6VGIR',
     )
-    myUserName =response['Items'][0]['username']['S']
+    myUserName = response['Items'][0]['username']['S']
     return myUserName
 
 
@@ -69,11 +68,14 @@ def lambda_handler(event, context):
     r = http.request('GET', transcript_response)
     transcript_json = eval(r.data)
     transcript_text = transcript_json['results']['transcripts'][0]['transcript']
-    transcript_recording_file_object = s3_client.get_object(Bucket="voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
-                                  Key=f"recordings/{filename}.wav")
-    myAgentId = transcript_recording_file_object["Metadata"]["agent-id"]
-    myUserName = getUserNamefromAgentId(myAgentId)
+    transcript_recording_file_object = s3_client.get_object(
+        Bucket="voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+        Key=f"recordings/{filename}.wav")
 
+    myAgentId = transcript_recording_file_object["Metadata"]["agent-id"]
+
+    #runs a query on the Dynamodb usertable to get username which doubles as a slack channel name
+    myUserName = getUserNamefromAgentId(myAgentId)
 
     myMsg = f"Transcript: {transcript_text}"
     myMsg += f"Recording available at: {presigned_url_to_vm_recording}"
