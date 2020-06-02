@@ -1,27 +1,19 @@
+import boto3
 import config
 
 
-class SlackMessage(object):
-    def __init__(self, text=None, subject=None, channel=config.DEFAULT_CHANNEL_NAME, warning=None):
-        self.text = text
-        self.subject = subject
-        self.channel = channel
-        self.warning = warning
-
-    def __setattr__(self, name, val):
-        self.__dict__[name] = val
-
-    @classmethod
-    def from_json(cls, json_obj):
-        m = cls()
-        for key in json_obj.keys():
-            setattr(m, key, json_obj[key])
-        return m
-
-    def __str__(self):
-        myMessage = f'*{self.subject}*\n{self.text}'
-
-        if self.warning is not None :
-            myMessage += f'Warning: {self.warning}'
-
-        return myMessage
+def lambda_handler(event, context):
+    username = event["Details"]["Parameters"]["Agent"]
+    if username == "":
+        username = event["Details"]["ContactData"]["Attributes"]["Agent"]
+    client = boto3.client('dynamodb')
+    response = client.scan(TableName=config.USER_TABLE_NAME,
+                           AttributesToGet=['userId', 'username', 'transcribeVoicemail', 'encryptVoicemail'],
+                           )
+    resultMap = {}
+    for items in response['Items']:
+        if items['username']['S'] == username:
+            resultMap = {"agentId": items['userId']['S'], "transcribeVoicemail": items['transcribeVoicemail']['BOOL'],
+                         "encryptVoicemail": items['encryptVoicemail']['BOOL'], "transferMessage": " ",
+                         "saveCallRecording": True, "extensionNumber": "12"}
+    return resultMap

@@ -12,6 +12,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 logger.debug('retrieving the Slack API key from SSM parameter store')
+response = None
 try:
     response = ssm.get_parameter(
         Name=config.SLACK_API_PARAMETER_NAME,

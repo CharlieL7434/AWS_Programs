@@ -29,7 +29,7 @@ def getUserNamefromAgentId(uid):
             },
         },
         KeyConditionExpression='agentId = :v1',
-        TableName='VoicemailTest-VoicemailStack-SJ17OAJAXH9U-UsersTable-QPOOKWC6VGIR',
+        TableName=config.USER_TABLE_NAME,
     )
     myUserName = response['Items'][0]['username']['S']
     return myUserName
@@ -44,7 +44,7 @@ def lambda_handler(event, context):
         recording_response = s3_client.generate_presigned_url(
             'get_object',
             Params={
-                'Bucket': "voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+                'Bucket': config.AUDIO_RECORDINGS_BUCKET,
                 'Key': f"recordings/{filename}.wav"
             },
             ExpiresIn=100)
@@ -57,7 +57,7 @@ def lambda_handler(event, context):
         transcript_response = s3_client.generate_presigned_url(
             'get_object',
             Params={
-                'Bucket': "voicemail-transcripts-bucket",
+                'Bucket': config.TRANSCRIPT_BUCKET,
                 'Key': f"{filename}"
             },
             ExpiresIn=100)
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
     transcript_json = eval(r.data)
     transcript_text = transcript_json['results']['transcripts'][0]['transcript']
     transcript_recording_file_object = s3_client.get_object(
-        Bucket="voicemailtest-voicemailstac-audiorecordingsbucket-1sckoc240lu5n",
+        Bucket=config.AUDIO_RECORDINGS_BUCKET,
         Key=f"recordings/{filename}.wav")
 
     myAgentId = transcript_recording_file_object["Metadata"]["agent-id"]
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
     myUserName = getUserNamefromAgentId(myAgentId)
 
     myMsg = f"Transcript: {transcript_text}"
-    myMsg += f"Recording available at: {presigned_url_to_vm_recording}"
+    myMsg += f"\n<{presigned_url_to_vm_recording}|click here to download your voicemail>"
 
     myJsonMsg = SlackMessage(
         subject="New voicemail from PragmaConnect",
