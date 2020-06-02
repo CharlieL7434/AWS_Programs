@@ -78,7 +78,7 @@ def lambda_handler(event, context):
     myUserName = getUserNamefromAgentId(myAgentId)
 
     myMsg = f"Transcript: {transcript_text}"
-    myMsg += f"\n<{presigned_url_to_vm_recording}|click here to download your voicemail>"
+    myMsg += f"\n<{presigned_url_to_vm_recording}|recording>"
 
     myJsonMsg = SlackMessage(
         subject="New voicemail from PragmaConnect",
