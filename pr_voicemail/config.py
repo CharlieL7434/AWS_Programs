@@ -1,5 +1,5 @@
 # Set the channel in Slack to which messages will be sent by default, including warnings and unaddressed messages.
-DEFAULT_CHANNEL_NAME = "charlotte"
+DEFAULT_CHANNEL_NAME = "Charlotte"
 
 # Set the SNS topic name to be monitored for messages
 SNS_TOPIC_NAME = "Slacker"

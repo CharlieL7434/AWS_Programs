@@ -47,7 +47,7 @@ def lambda_handler(event, context):
                 'Bucket': config.AUDIO_RECORDINGS_BUCKET,
                 'Key': f"recordings/{filename}.wav"
             },
-            ExpiresIn=100)
+            ExpiresIn=1814400)
     except ClientError as e:
         logging.error(e)
 
@@ -82,7 +82,7 @@ def lambda_handler(event, context):
 
     myJsonMsg = SlackMessage(
         subject="New voicemail from PragmaConnect",
-        channel=myUserName,
+        channel="Charlotte",
         text=myMsg
     )
     lambdaResponse = slackSend(myJsonMsg)

@@ -5,6 +5,7 @@ from slack.errors import SlackApiError
 import config
 import logging
 
+
 session = boto3.session.Session()
 ssm = session.client('ssm')
 
